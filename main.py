@@ -3,10 +3,23 @@ import random
 import requests
 from urllib.parse import quote_plus
 
+# Load .env file if present (python-dotenv is optional but recommended)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed; rely on system environment variables
+
 # --- Config -----------------------------------------------------------
 
-# Use environment variable if set, otherwise default to the working OpenWeatherMap API key
-WEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "YOUR_API_KEY_HERE")
+# Read API key exclusively from environment variable (set in .env or system env)
+WEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
+if not WEATHER_API_KEY:
+    raise EnvironmentError(
+        "OpenWeatherMap API key not found. "
+        "Create a .env file in the project root with:\n"
+        "  OPENWEATHER_API_KEY=your_key_here"
+    )
 
 # --- Weather Mood Catalog ---------------------------------------------
 # Curated pools of top artists and genre keywords tailored to each weather condition and time of day
@@ -95,8 +108,41 @@ GENRE_WEATHER_CATALOG = {
 
 # --- Weather & Location Service ----------------------------------------
 
+def get_saved_default_city():
+    """Retrieve the saved default home city from persistent config, defaulting to Coimbatore."""
+    pref_file = os.path.join(os.path.dirname(__file__), "user_preferences.json")
+    if os.path.exists(pref_file):
+        try:
+            import json
+            with open(pref_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                city = data.get("default_city")
+                if city and isinstance(city, str) and city.strip():
+                    return city.strip()
+        except Exception:
+            pass
+    return "Coimbatore"
+
+
+def save_default_city(city_name):
+    """Save the user's preferred default home city to persistent storage."""
+    if not city_name or not city_name.strip():
+        return
+    pref_file = os.path.join(os.path.dirname(__file__), "user_preferences.json")
+    try:
+        import json
+        with open(pref_file, "w", encoding="utf-8") as f:
+            json.dump({"default_city": city_name.strip()}, f, indent=2)
+    except Exception:
+        pass
+
+
 def get_current_location():
-    """Resilient multi-provider location detector (ipinfo -> ip-api -> freeipapi). Returns city name or None."""
+    """
+    Resilient multi-provider location detector (ipinfo -> ip-api -> freeipapi).
+    Corrects ISP regional gateway routing (e.g. ISP Chennai gateway) to Coimbatore.
+    """
+    saved_home = get_saved_default_city()
     endpoints = [
         ("https://ipinfo.io/json", "city"),
         ("http://ip-api.com/json", "city"),
@@ -109,10 +155,14 @@ def get_current_location():
                 data = resp.json()
                 city = data.get(key)
                 if city and isinstance(city, str) and city.strip():
-                    return city.strip()
+                    detected = city.strip()
+                    # If ISP routes Tamil Nadu traffic to Chennai gateway, honor user's actual location (Coimbatore)
+                    if detected.lower() in ["chennai", "madras"] and saved_home.lower() == "coimbatore":
+                        return "Coimbatore"
+                    return detected
         except Exception:
             continue
-    return None
+    return saved_home or "Coimbatore"
 
 
 def get_weather_and_time(city_name):

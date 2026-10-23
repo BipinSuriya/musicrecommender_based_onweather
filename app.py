@@ -20,6 +20,8 @@ from main import (
     get_weather_vibe_summary,
     reverse_geocode_city,
     get_current_location,
+    get_saved_default_city,
+    save_default_city,
 )
 
 # --- Safe HTML Renderer (Prevents Markdown Code Fence Formatting) ------
@@ -83,8 +85,10 @@ def cached_recommendations(condition, time_of_day, temp, genre, count, seed_offs
     )
 
 # --- State Initialization & Callback Handlers -------------------------
+SAVED_HOME_CITY = get_saved_default_city()
+
 if "city" not in st.session_state:
-    st.session_state.city = "London"
+    st.session_state.city = SAVED_HOME_CITY
 if "city_input_box" not in st.session_state:
     st.session_state.city_input_box = st.session_state.city
 if "seed_offset" not in st.session_state:
@@ -93,6 +97,13 @@ if "location_toast" not in st.session_state:
     st.session_state.location_toast = None
 if "theme_mode" not in st.session_state:
     st.session_state.theme_mode = "dark"
+
+def save_home_callback():
+    """Save the current active city as the persistent home city for future runs."""
+    curr = st.session_state.city.strip()
+    if curr:
+        save_default_city(curr)
+        st.session_state.location_toast = f"🏠 Saved {curr} as your default startup city!"
 
 def set_city_callback(new_city):
     """Callback triggered before script run: safely updates city state without widget key collisions."""
