@@ -82,19 +82,45 @@ def cached_recommendations(condition, time_of_day, temp, genre, count, seed_offs
         mock_weather, genre=genre, count=count, seed_offset=seed_offset
     )
 
-# --- Session State Initialization & City Setter -----------------------
+# --- State Initialization & Callback Handlers -------------------------
 if "city" not in st.session_state:
     st.session_state.city = "London"
 if "city_input_box" not in st.session_state:
     st.session_state.city_input_box = st.session_state.city
 if "seed_offset" not in st.session_state:
     st.session_state.seed_offset = 0
+if "location_toast" not in st.session_state:
+    st.session_state.location_toast = None
 
-def set_city(new_city):
-    """Safely update city in session state across all widgets."""
+def set_city_callback(new_city):
+    """Callback triggered before script run: safely updates city state without widget key collisions."""
     clean_city = new_city.strip()
     st.session_state.city = clean_city
     st.session_state.city_input_box = clean_city
+
+def on_city_input_change():
+    """Callback triggered when user types and enters a city into the text input."""
+    typed = st.session_state.city_input_box.strip()
+    if typed:
+        st.session_state.city = typed
+
+def auto_detect_callback():
+    """Callback triggered by auto-detect button: detects city via multi-provider IP and sets state."""
+    detected = get_current_location()
+    if detected:
+        set_city_callback(detected)
+        st.session_state.location_toast = f"📍 Sky synchronized with {detected}!"
+    else:
+        st.session_state.location_toast = "⚠️ Could not auto-detect location. Please type your city name."
+
+def shuffle_callback():
+    """Callback for discovery shuffler."""
+    st.session_state.seed_offset += 1
+
+# Display any pending toasts from callbacks
+if st.session_state.location_toast:
+    st.toast(st.session_state.location_toast, icon="🌦️")
+    st.session_state.location_toast = None
 
 # --- Ambient Weather Theme Gradients ----------------------------------
 THEME_GRADIENTS = {
@@ -588,76 +614,50 @@ with st.sidebar:
         """
     )
 
-    # 1-Click Fast, Bulletproof Auto-Detect Location Button
+    # 1-Click Fast, Bulletproof Auto-Detect Location Button using Callback
     st.markdown('<div class="detect-btn-wrapper">', unsafe_allow_html=True)
-    if st.button("🎯 Auto-Detect My Location", use_container_width=True):
-        with st.spinner("📡 Triangulating local skies..."):
-            detected = get_current_location()
-            if detected:
-                set_city(detected)
-                st.toast(f"📍 Sky synchronized with {detected}!", icon="🌦️")
-                st.rerun()
-            else:
-                st.warning("⚠️ Could not resolve network location. Please type your city name below.")
+    st.button("🎯 Auto-Detect My Location", on_click=auto_detect_callback, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Optional Satellite GPS fallback with safe error shielding
+    # Optional Precision Satellite GPS in collapsed expander
     if HAS_GEOLOCATION and callable(streamlit_geolocation):
         with st.expander("📡 Precision Satellite GPS", expanded=False):
-            st.caption("Tap below to query device GPS sensor:")
+            st.caption("Query device GPS sensor (requires permission):")
             try:
                 loc = streamlit_geolocation()
                 if loc and loc.get("latitude") and loc.get("longitude"):
                     detected = reverse_geocode_city(loc["latitude"], loc["longitude"])
                     if detected and detected.lower() != st.session_state.city.lower():
-                        set_city(detected)
+                        set_city_callback(detected)
                         st.toast(f"📍 GPS locked: {detected}", icon="🛰️")
                         st.rerun()
             except Exception:
-                st.caption("Hardware GPS unavailable; network telemetry active.")
+                st.caption("Satellite GPS idle. Network telemetry active.")
 
-    # Synchronized City Input Box
+    # Synchronized City Input Box with on_change callback
     city_input = st.text_input(
         "🏙️ City or Destination",
         key="city_input_box",
+        on_change=on_city_input_change,
         placeholder="e.g. London, Tokyo, New York, Chennai...",
     )
-    if city_input and city_input.strip() != st.session_state.city:
-        st.session_state.city = city_input.strip()
-        st.rerun()
 
-    # Quick City Presets
+    # Quick City Presets using on_click callbacks (safe & collision-free)
     st.markdown(
         "<span style='font-size: 0.82rem; font-weight: 600; color: #94A3B8;'>⚡ Quick Teleport Destinations:</span>",
         unsafe_allow_html=True,
     )
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        if st.button("🇬🇧 London", use_container_width=True):
-            set_city("London")
-            st.rerun()
-        if st.button("🇯🇵 Tokyo", use_container_width=True):
-            set_city("Tokyo")
-            st.rerun()
-        if st.button("🇮🇳 Chennai", use_container_width=True):
-            set_city("Chennai")
-            st.rerun()
-        if st.button("🇮🇸 Reykjavík", use_container_width=True):
-            set_city("Reykjavik")
-            st.rerun()
+        st.button("🇬🇧 London", on_click=set_city_callback, args=("London",), use_container_width=True)
+        st.button("🇯🇵 Tokyo", on_click=set_city_callback, args=("Tokyo",), use_container_width=True)
+        st.button("🇮🇳 Chennai", on_click=set_city_callback, args=("Chennai",), use_container_width=True)
+        st.button("🇮🇸 Reykjavík", on_click=set_city_callback, args=("Reykjavik",), use_container_width=True)
     with col_p2:
-        if st.button("🇺🇸 New York", use_container_width=True):
-            set_city("New York")
-            st.rerun()
-        if st.button("🇫🇷 Paris", use_container_width=True):
-            set_city("Paris")
-            st.rerun()
-        if st.button("🇦🇺 Sydney", use_container_width=True):
-            set_city("Sydney")
-            st.rerun()
-        if st.button("🌴 Miami", use_container_width=True):
-            set_city("Miami")
-            st.rerun()
+        st.button("🇺🇸 New York", on_click=set_city_callback, args=("New York",), use_container_width=True)
+        st.button("🇫🇷 Paris", on_click=set_city_callback, args=("Paris",), use_container_width=True)
+        st.button("🇦🇺 Sydney", on_click=set_city_callback, args=("Sydney",), use_container_width=True)
+        st.button("🌴 Miami", on_click=set_city_callback, args=("Miami",), use_container_width=True)
 
     st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 20px 0;'>", unsafe_allow_html=True)
 
@@ -687,11 +687,9 @@ with st.sidebar:
         help="Recommends a deep non-repeating playlist of unique studio tracks.",
     )
 
-    # Shuffle button
+    # Shuffle button with callback
     st.markdown('<div class="shuffle-btn-wrapper">', unsafe_allow_html=True)
-    if st.button("🎲 Shuffle & Fresh Discoveries", use_container_width=True):
-        st.session_state.seed_offset += 1
-        st.rerun()
+    st.button("🎲 Shuffle & Fresh Discoveries", on_click=shuffle_callback, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Sidebar Footer Specs Card
@@ -704,7 +702,7 @@ with st.sidebar:
             <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 6px; line-height: 1.5;">
                 • High-Res 600px Retina Covers<br>
                 • 30s High-Fidelity Audio Previews<br>
-                • Real-time OpenWeather atmospheric telemetry<br>
+                • Multi-provider telemetry & auto-sync<br>
                 • Deduplicated catalog matching
             </div>
         </div>
@@ -761,15 +759,9 @@ else:
         )
         col_err1, col_err2 = st.columns(2)
         with col_err1:
-            if st.button("🔄 Reset to London", use_container_width=True):
-                set_city("London")
-                st.rerun()
+            st.button("🔄 Reset to London", on_click=set_city_callback, args=("London",), use_container_width=True)
         with col_err2:
-            if st.button("🎯 Detect My Location", use_container_width=True):
-                loc = get_current_location()
-                if loc:
-                    set_city(loc)
-                    st.rerun()
+            st.button("🎯 Detect My Location", on_click=auto_detect_callback, use_container_width=True)
     else:
         vibe = get_weather_vibe_summary(weather, genre=genre)
         theme_key = vibe.get("theme", "sunny")
