@@ -91,6 +91,8 @@ if "seed_offset" not in st.session_state:
     st.session_state.seed_offset = 0
 if "location_toast" not in st.session_state:
     st.session_state.location_toast = None
+if "theme_mode" not in st.session_state:
+    st.session_state.theme_mode = "dark"
 
 def set_city_callback(new_city):
     """Callback triggered before script run: safely updates city state without widget key collisions."""
@@ -113,6 +115,12 @@ def auto_detect_callback():
     else:
         st.session_state.location_toast = "⚠️ Could not auto-detect location. Please type your city name."
 
+def toggle_theme_callback():
+    """Callback to switch between Dark and Light mode."""
+    st.session_state.theme_mode = "light" if st.session_state.theme_mode == "dark" else "dark"
+    mode_name = "☀️ Daylight Light Mode" if st.session_state.theme_mode == "light" else "🌙 Luxury Dark Mode"
+    st.session_state.location_toast = f"Switched to {mode_name}"
+
 def shuffle_callback():
     """Callback for discovery shuffler."""
     st.session_state.seed_offset += 1
@@ -122,8 +130,8 @@ if st.session_state.location_toast:
     st.toast(st.session_state.location_toast, icon="🌦️")
     st.session_state.location_toast = None
 
-# --- Ambient Weather Theme Gradients ----------------------------------
-THEME_GRADIENTS = {
+# --- Ambient Weather Theme Gradients (Dark vs Light) ------------------
+THEME_GRADIENTS_DARK = {
     "sunny": (
         "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(245, 158, 11, 0.24) 0%, rgba(217, 119, 6, 0.08) 50%, rgba(8, 12, 21, 0) 100%), "
         "linear-gradient(180deg, #0d121f 0%, #080c15 100%)"
@@ -158,102 +166,213 @@ THEME_GRADIENTS = {
     ),
 }
 
+THEME_GRADIENTS_LIGHT = {
+    "sunny": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(251, 191, 36, 0.32) 0%, rgba(245, 158, 11, 0.10) 50%, rgba(248, 250, 252, 0) 100%), "
+        "linear-gradient(180deg, #FFFDF7 0%, #F1F5F9 100%)"
+    ),
+    "night": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(99, 102, 241, 0.22) 0%, rgba(129, 140, 248, 0.08) 50%, rgba(241, 245, 249, 0) 100%), "
+        "linear-gradient(180deg, #EEF2FF 0%, #E2E8F0 100%)"
+    ),
+    "rain": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(14, 165, 233, 0.24) 0%, rgba(56, 189, 248, 0.09) 50%, rgba(241, 245, 249, 0) 100%), "
+        "linear-gradient(180deg, #F0F9FF 0%, #E2E8F0 100%)"
+    ),
+    "rain-night": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(20, 184, 166, 0.20) 0%, rgba(15, 118, 110, 0.08) 50%, rgba(241, 245, 249, 0) 100%), "
+        "linear-gradient(180deg, #F0FDFA 0%, #E2E8F0 100%)"
+    ),
+    "clouds": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(148, 163, 184, 0.24) 0%, rgba(100, 116, 139, 0.08) 50%, rgba(241, 245, 249, 0) 100%), "
+        "linear-gradient(180deg, #F8FAFC 0%, #E2E8F0 100%)"
+    ),
+    "snow": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(186, 230, 253, 0.32) 0%, rgba(125, 211, 252, 0.12) 50%, rgba(241, 245, 249, 0) 100%), "
+        "linear-gradient(180deg, #F8FAFC 0%, #E0F2FE 100%)"
+    ),
+    "storm": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(168, 85, 247, 0.24) 0%, rgba(126, 34, 206, 0.10) 50%, rgba(241, 245, 249, 0) 100%), "
+        "linear-gradient(180deg, #FAF5FF 0%, #EDE9FE 100%)"
+    ),
+    "mist": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(192, 132, 252, 0.22) 0%, rgba(147, 51, 234, 0.08) 50%, rgba(241, 245, 249, 0) 100%), "
+        "linear-gradient(180deg, #FAF5FF 0%, #E2E8F0 100%)"
+    ),
+}
+
+is_dark = (st.session_state.theme_mode == "dark")
+
+# --- Dynamic CSS Variables (Dark Luxury vs Apple-Grade Light Frosted) --
+if is_dark:
+    CSS_VARIABLES = """
+    :root {
+        --bg-app: #080C15;
+        --text-primary: #F8FAFC;
+        --text-secondary: #94A3B8;
+        --text-muted: #64748B;
+        --card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%);
+        --card-border: rgba(255, 255, 255, 0.09);
+        --card-hover-border: rgba(99, 102, 241, 0.45);
+        --card-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+        --hero-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%);
+        --hero-border: rgba(255, 255, 255, 0.12);
+        --badge-chip-bg: rgba(255, 255, 255, 0.07);
+        --badge-chip-border: rgba(255, 255, 255, 0.12);
+        --badge-chip-text: #E2E8F0;
+        --metric-tile-bg: rgba(255, 255, 255, 0.04);
+        --metric-tile-border: rgba(255, 255, 255, 0.08);
+        --sidebar-bg: #0b101c;
+        --sidebar-border: rgba(255, 255, 255, 0.07);
+        --input-bg: rgba(255, 255, 255, 0.05);
+        --input-border: rgba(255, 255, 255, 0.12);
+        --input-text: #F8FAFC;
+        --btn-bg: rgba(255, 255, 255, 0.05);
+        --btn-border: rgba(255, 255, 255, 0.12);
+        --btn-text: #F8FAFC;
+        --stream-btn-bg: rgba(255, 255, 255, 0.05);
+        --stream-btn-border: rgba(255, 255, 255, 0.1);
+        --stream-btn-text: #FFFFFF;
+        --brand-title-grad: linear-gradient(135deg, #FFFFFF 30%, #A5B4FC 100%);
+        --audio-filter: invert(0.92) hue-rotate(180deg) brightness(1.15);
+        --status-pill-bg: rgba(16, 185, 129, 0.1);
+        --status-pill-border: rgba(16, 185, 129, 0.3);
+        --status-pill-text: #6EE7B7;
+        --header-border: rgba(255, 255, 255, 0.08);
+        --theme-toggle-bg: rgba(255, 255, 255, 0.06);
+        --theme-toggle-border: rgba(255, 255, 255, 0.14);
+        --theme-toggle-text: #F8FAFC;
+    }
+    """
+else:
+    CSS_VARIABLES = """
+    :root {
+        --bg-app: #F8FAFC;
+        --text-primary: #0F172A;
+        --text-secondary: #475569;
+        --text-muted: #64748B;
+        --card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(255, 255, 255, 0.75) 100%);
+        --card-border: rgba(226, 232, 240, 0.95);
+        --card-hover-border: rgba(99, 102, 241, 0.6);
+        --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+        --hero-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.80) 100%);
+        --hero-border: rgba(226, 232, 240, 0.95);
+        --badge-chip-bg: rgba(241, 245, 249, 0.95);
+        --badge-chip-border: rgba(203, 213, 225, 0.8);
+        --badge-chip-text: #1E293B;
+        --metric-tile-bg: rgba(255, 255, 255, 0.9);
+        --metric-tile-border: rgba(226, 232, 240, 0.95);
+        --sidebar-bg: #FFFFFF;
+        --sidebar-border: rgba(226, 232, 240, 0.85);
+        --input-bg: #FFFFFF;
+        --input-border: #CBD5E1;
+        --input-text: #0F172A;
+        --btn-bg: #FFFFFF;
+        --btn-border: #CBD5E1;
+        --btn-text: #0F172A;
+        --stream-btn-bg: #F8FAFC;
+        --stream-btn-border: #E2E8F0;
+        --stream-btn-text: #0F172A;
+        --brand-title-grad: linear-gradient(135deg, #1E1B4B 20%, #4338CA 100%);
+        --audio-filter: none;
+        --status-pill-bg: rgba(16, 185, 129, 0.12);
+        --status-pill-border: rgba(16, 185, 129, 0.4);
+        --status-pill-text: #065F46;
+        --header-border: rgba(226, 232, 240, 0.8);
+        --theme-toggle-bg: #FFFFFF;
+        --theme-toggle-border: #CBD5E1;
+        --theme-toggle-text: #0F172A;
+    }
+    """
+
 # --- Premium Global CSS Design System ---------------------------------
-CUSTOM_CSS = """
+CUSTOM_CSS = f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@500;600&display=swap');
 
-:root {
-    --bg-dark: #080C15;
-    --accent-indigo: #6366F1;
-    --accent-purple: #A855F7;
-    --accent-cyan: #06B6D4;
-    --accent-emerald: #10B981;
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-muted: #64748B;
-}
+{CSS_VARIABLES}
 
-html, body, [class*="css"], .stApp {
+html, body, [class*="css"], .stApp {{
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
     color: var(--text-primary) !important;
-    background-color: var(--bg-dark) !important;
-}
+    background-color: var(--bg-app) !important;
+}}
 
-h1, h2, h3, h4, .outfit-font {
+h1, h2, h3, h4, .outfit-font {{
     font-family: 'Outfit', sans-serif !important;
     letter-spacing: -0.02em;
-}
+    color: var(--text-primary) !important;
+}}
 
-/* Custom dark scrollbars */
-::-webkit-scrollbar {
+/* Custom scrollbars */
+::-webkit-scrollbar {{
     width: 7px;
     height: 7px;
-}
-::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-}
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+}}
+::-webkit-scrollbar-track {{
+    background: rgba(0, 0, 0, 0.05);
+}}
+::-webkit-scrollbar-thumb {{
+    background: rgba(148, 163, 184, 0.4);
     border-radius: 999px;
-}
-::-webkit-scrollbar-thumb:hover {
+}}
+::-webkit-scrollbar-thumb:hover {{
     background: rgba(99, 102, 241, 0.6);
-}
+}}
 
 /* Hide unneeded Streamlit top decorative bar */
-header[data-testid="stHeader"] {
+header[data-testid="stHeader"] {{
     background: transparent !important;
-}
+}}
 
 /* Sidebar styling */
-section[data-testid="stSidebar"] {
-    background-color: #0b101c !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4) !important;
-}
+section[data-testid="stSidebar"] {{
+    background-color: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--sidebar-border) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
+}}
 
 section[data-testid="stSidebar"] .stTextInput input,
-section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {{
+    background: var(--input-bg) !important;
+    border: 1px solid var(--input-border) !important;
     border-radius: 12px !important;
-    color: #F8FAFC !important;
-}
+    color: var(--input-text) !important;
+}}
 
-section[data-testid="stSidebar"] .stTextInput input:focus {
+section[data-testid="stSidebar"] .stTextInput input:focus {{
     border-color: #6366F1 !important;
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
-}
+}}
 
 /* Audio Wave Visualizer Animation */
-.sound-wave {
+.sound-wave {{
     display: inline-flex;
     align-items: flex-end;
     gap: 3.5px;
     height: 22px;
     vertical-align: middle;
     margin-left: 10px;
-}
-.sound-wave .bar {
+}}
+.sound-wave .bar {{
     width: 3.5px;
     background: linear-gradient(180deg, #818CF8 0%, #EC4899 100%);
     border-radius: 999px;
     animation: soundWave 1.1s ease-in-out infinite alternate;
-}
-.sound-wave .b1 { height: 35%; animation-delay: 0.1s; }
-.sound-wave .b2 { height: 85%; animation-delay: 0.45s; }
-.sound-wave .b3 { height: 50%; animation-delay: 0.25s; }
-.sound-wave .b4 { height: 100%; animation-delay: 0.6s; }
-.sound-wave .b5 { height: 65%; animation-delay: 0.35s; }
+}}
+.sound-wave .b1 {{ height: 35%; animation-delay: 0.1s; }}
+.sound-wave .b2 {{ height: 85%; animation-delay: 0.45s; }}
+.sound-wave .b3 {{ height: 50%; animation-delay: 0.25s; }}
+.sound-wave .b4 {{ height: 100%; animation-delay: 0.6s; }}
+.sound-wave .b5 {{ height: 65%; animation-delay: 0.35s; }}
 
-@keyframes soundWave {
-    0% { transform: scaleY(0.35); }
-    100% { transform: scaleY(1); }
-}
+@keyframes soundWave {{
+    0% {{ transform: scaleY(0.35); }}
+    100% {{ transform: scaleY(1); }}
+}}
 
 /* Pulsing Status Dot */
-.pulse-dot {
+.pulse-dot {{
     display: inline-block;
     width: 8px;
     height: 8px;
@@ -263,77 +382,76 @@ section[data-testid="stSidebar"] .stTextInput input:focus {
     animation: pulse 1.8s infinite;
     margin-right: 6px;
     vertical-align: middle;
-}
-@keyframes pulse {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
+}}
+@keyframes pulse {{
+    0% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }}
+    70% {{ transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }}
+    100% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }}
+}}
 
 /* Premium Top Header Brand Bar */
-.brand-header {
+.brand-header {{
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px 0 20px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--header-border);
     margin-bottom: 24px;
-}
-.brand-title {
+}}
+.brand-title {{
     font-size: 2.3rem;
     font-weight: 800;
     margin: 0;
-    background: linear-gradient(135deg, #FFFFFF 30%, #A5B4FC 100%);
+    background: var(--brand-title-grad);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     display: flex;
     align-items: center;
-}
-.brand-subtitle {
+}}
+.brand-subtitle {{
     color: var(--text-secondary);
     font-size: 0.95rem;
     margin-top: 4px;
     font-weight: 400;
-}
-.status-pill {
+}}
+.status-pill {{
     display: inline-flex;
     align-items: center;
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    color: #6EE7B7;
+    background: var(--status-pill-bg);
+    border: 1px solid var(--status-pill-border);
+    color: var(--status-pill-text);
     padding: 6px 14px;
     border-radius: 999px;
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 0.03em;
-}
+}}
 
 /* Glassmorphism Hero Showcase Deck */
-.weather-hero-deck {
+.weather-hero-deck {{
     border-radius: 24px;
     padding: 30px 34px;
     margin-bottom: 28px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%);
+    background: var(--hero-bg);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), 0 20px 48px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--hero-border);
+    box-shadow: var(--card-shadow);
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.weather-hero-deck:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), 0 24px 56px -12px rgba(0, 0, 0, 0.65);
-}
+}}
+.weather-hero-deck:hover {{
+    border-color: rgba(99, 102, 241, 0.4);
+}}
 
-.hero-meta-row {
+.hero-meta-row {{
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
     margin-bottom: 16px;
-}
-.badge-chip {
+}}
+.badge-chip {{
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -341,175 +459,174 @@ section[data-testid="stSidebar"] .stTextInput input:focus {
     font-weight: 600;
     padding: 4px 12px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.07);
-    color: #E2E8F0;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-}
-.badge-condition {
-    background: rgba(99, 102, 241, 0.2);
-    color: #C7D2FE;
-    border-color: rgba(99, 102, 241, 0.4);
-}
+    background: var(--badge-chip-bg);
+    color: var(--badge-chip-text);
+    border: 1px solid var(--badge-chip-border);
+}}
+.badge-condition {{
+    background: rgba(99, 102, 241, 0.18);
+    color: #4F46E5;
+    border-color: rgba(99, 102, 241, 0.35);
+}}
 
-.hero-main-content {
+.hero-main-content {{
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 20px;
-}
-.temp-display {
+}}
+.temp-display {{
     display: flex;
     align-items: center;
     gap: 12px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--metric-tile-bg);
+    border: 1px solid var(--metric-tile-border);
     padding: 12px 24px;
     border-radius: 20px;
-}
-.temp-number {
+}}
+.temp-number {{
     font-family: 'Outfit', sans-serif;
     font-size: 3.8rem;
     font-weight: 800;
     line-height: 1;
-    color: #FFFFFF;
-}
-.temp-unit {
+    color: var(--text-primary);
+}}
+.temp-unit {{
     font-size: 1.8rem;
     font-weight: 600;
-    color: #A5B4FC;
-}
-.temp-subtext {
+    color: #6366F1;
+}}
+.temp-subtext {{
     font-size: 0.95rem;
     color: var(--text-secondary);
     margin-top: 2px;
-}
+}}
 
-.hero-headline {
+.hero-headline {{
     font-size: 1.85rem;
     font-weight: 700;
     margin: 8px 0 6px 0;
-    color: #FFFFFF;
+    color: var(--text-primary);
     font-family: 'Outfit', sans-serif;
-}
-.hero-desc {
+}}
+.hero-desc {{
     font-size: 1.05rem;
-    color: #CBD5E1;
+    color: var(--text-secondary);
     line-height: 1.6;
     max-width: 680px;
     margin: 0;
-}
+}}
 
-.hero-metrics-grid {
+.hero-metrics-grid {{
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 22px;
     padding-top: 18px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-.metric-tile {
+    border-top: 1px solid var(--hero-border);
+}}
+.metric-tile {{
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--metric-tile-bg);
+    border: 1px solid var(--metric-tile-border);
     border-radius: 14px;
     padding: 8px 16px;
     font-size: 0.92rem;
-    color: #E2E8F0;
+    color: var(--text-primary);
     transition: all 0.2s ease;
-}
-.metric-tile:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.16);
+}}
+.metric-tile:hover {{
+    border-color: rgba(99, 102, 241, 0.4);
     transform: translateY(-1px);
-}
+}}
 
 /* Container Border Wrapper Card Styling (Streamlit Native Containers) */
-div[data-testid="stVerticalBlockBorderWrapper"] {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%) !important;
+div[data-testid="stVerticalBlockBorderWrapper"] {{
+    background: var(--card-bg) !important;
     backdrop-filter: blur(18px) saturate(160%) !important;
     -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    border: 1px solid var(--card-border) !important;
     border-radius: 20px !important;
     padding: 18px 20px !important;
-    box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45) !important;
+    box-shadow: var(--card-shadow) !important;
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease !important;
     margin-bottom: 18px !important;
-}
+}}
 
-div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
     transform: translateY(-4px) !important;
-    border-color: rgba(99, 102, 241, 0.45) !important;
-    box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.65), 0 0 24px 0 rgba(99, 102, 241, 0.18) !important;
-}
+    border-color: var(--card-hover-border) !important;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.12), 0 0 20px 0 rgba(99, 102, 241, 0.15) !important;
+}}
 
 /* Track Card Metadata */
-.card-header-line {
+.card-header-line {{
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
-}
-.track-rank {
+}}
+.track-rank {{
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.85rem;
     font-weight: 700;
-    color: #818CF8;
+    color: #6366F1;
     background: rgba(99, 102, 241, 0.12);
     border: 1px solid rgba(99, 102, 241, 0.25);
     padding: 2px 8px;
     border-radius: 8px;
-}
-.track-name-text {
+}}
+.track-name-text {{
     font-family: 'Outfit', sans-serif;
     font-size: 1.15rem;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--text-primary);
     margin: 4px 0 2px 0;
     line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-.track-artist-text {
+}}
+.track-artist-text {{
     font-size: 0.95rem;
     font-weight: 500;
-    color: #CBD5E1;
+    color: var(--text-secondary);
     margin-bottom: 4px;
     display: flex;
     align-items: center;
     gap: 6px;
-}
-.track-album-text {
+}}
+.track-album-text {{
     font-size: 0.82rem;
-    color: #94A3B8;
+    color: var(--text-muted);
     margin-bottom: 10px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
+}}
 
 /* Native Streamlit Audio Player Styling */
-div[data-testid="stAudio"] {
+div[data-testid="stAudio"] {{
     margin: 8px 0 12px 0;
-}
-div[data-testid="stAudio"] audio {
+}}
+div[data-testid="stAudio"] audio {{
     width: 100%;
     height: 38px;
     border-radius: 999px;
     outline: none;
-    filter: invert(0.92) hue-rotate(180deg) brightness(1.15);
-}
+    filter: var(--audio-filter);
+}}
 
 /* External Streaming Link Buttons */
-.stream-actions-group {
+.stream-actions-group {{
     display: flex;
     gap: 8px;
     margin-top: 10px;
-}
-.stream-action-pill {
+}}
+.stream-action-pill {{
     flex: 1;
     display: inline-flex;
     align-items: center;
@@ -521,79 +638,94 @@ div[data-testid="stAudio"] audio {
     font-weight: 600;
     text-decoration: none !important;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
-    color: #FFFFFF !important;
-}
-.stream-action-pill:hover {
+    border: 1px solid var(--stream-btn-border);
+    background: var(--stream-btn-bg);
+    color: var(--stream-btn-text) !important;
+}}
+.stream-action-pill:hover {{
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
-}
-.btn-apple:hover {
-    background: rgba(252, 60, 68, 0.22);
-    border-color: rgba(252, 60, 68, 0.65);
-    box-shadow: 0 6px 20px rgba(252, 60, 68, 0.25);
-}
-.btn-spotify:hover {
-    background: rgba(29, 185, 84, 0.22);
-    border-color: rgba(29, 185, 84, 0.65);
-    box-shadow: 0 6px 20px rgba(29, 185, 84, 0.25);
-}
-.btn-youtube:hover {
-    background: rgba(255, 0, 0, 0.2);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}}
+.btn-apple:hover {{
+    background: rgba(252, 60, 68, 0.15);
+    border-color: rgba(252, 60, 68, 0.6);
+    color: #FC3C44 !important;
+}}
+.btn-spotify:hover {{
+    background: rgba(29, 185, 84, 0.15);
+    border-color: rgba(29, 185, 84, 0.6);
+    color: #1DB954 !important;
+}}
+.btn-youtube:hover {{
+    background: rgba(255, 0, 0, 0.15);
     border-color: rgba(255, 0, 0, 0.6);
-    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.25);
-}
+    color: #FF0000 !important;
+}}
 
-.stream-icon {
+.stream-icon {{
     width: 17px;
     height: 17px;
     display: inline-block;
     vertical-align: middle;
     flex-shrink: 0;
-}
+}}
 
 /* Styled Streamlit Button Overrides */
-div[data-testid="stButton"] button {
+div[data-testid="stButton"] button {{
     border-radius: 14px !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    color: #F8FAFC !important;
+    border: 1px solid var(--btn-border) !important;
+    background: var(--btn-bg) !important;
+    color: var(--btn-text) !important;
     font-weight: 600 !important;
     transition: all 0.2s ease !important;
-}
-div[data-testid="stButton"] button:hover {
-    background: rgba(99, 102, 241, 0.2) !important;
+}}
+div[data-testid="stButton"] button:hover {{
+    background: rgba(99, 102, 241, 0.15) !important;
     border-color: rgba(99, 102, 241, 0.5) !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
-}
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.15) !important;
+}}
 
 /* Auto-Detect Location Button Accent */
-.detect-btn-wrapper div[data-testid="stButton"] button {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(168, 85, 247, 0.25) 100%) !important;
+.detect-btn-wrapper div[data-testid="stButton"] button {{
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%) !important;
     border: 1px solid rgba(99, 102, 241, 0.45) !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
     font-weight: 700 !important;
-}
-.detect-btn-wrapper div[data-testid="stButton"] button:hover {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.45) 0%, rgba(168, 85, 247, 0.45) 100%) !important;
+}}
+.detect-btn-wrapper div[data-testid="stButton"] button:hover {{
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.35) 0%, rgba(168, 85, 247, 0.35) 100%) !important;
     border-color: rgba(168, 85, 247, 0.7) !important;
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35) !important;
-}
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.25) !important;
+}}
+
+/* Theme Switcher Button Accent */
+.theme-switch-btn div[data-testid="stButton"] button {{
+    background: var(--theme-toggle-bg) !important;
+    border: 1px solid var(--theme-toggle-border) !important;
+    color: var(--theme-toggle-text) !important;
+    font-weight: 700 !important;
+    border-radius: 999px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}}
+.theme-switch-btn div[data-testid="stButton"] button:hover {{
+    border-color: #6366F1 !important;
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.3) !important;
+}}
 
 /* Primary discovery button */
-.shuffle-btn-wrapper div[data-testid="stButton"] button {
+.shuffle-btn-wrapper div[data-testid="stButton"] button {{
     background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%) !important;
     border: none !important;
     color: #FFFFFF !important;
     font-weight: 700 !important;
     box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.5) !important;
-}
-.shuffle-btn-wrapper div[data-testid="stButton"] button:hover {
+}}
+.shuffle-btn-wrapper div[data-testid="stButton"] button:hover {{
     transform: translateY(-2px) scale(1.02) !important;
     box-shadow: 0 12px 30px -4px rgba(168, 85, 247, 0.6) !important;
-}
+}}
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -603,16 +735,29 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 with st.sidebar:
     render_html(
         """
-        <div style="padding: 10px 0 18px 0; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px;">
-            <div style="font-size: 1.3rem; font-weight: 800; font-family: 'Outfit', sans-serif; color: #FFFFFF;">
+        <div style="padding: 10px 0 16px 0; border-bottom: 1px solid var(--sidebar-border); margin-bottom: 16px;">
+            <div style="font-size: 1.3rem; font-weight: 800; font-family: 'Outfit', sans-serif;">
                 🎛️ Atmospheric Studio
             </div>
-            <div style="font-size: 0.82rem; color: #94A3B8; margin-top: 3px;">
-                Fine-tune your skies & music algorithms
+            <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 3px;">
+                Fine-tune your skies, themes & music
             </div>
         </div>
         """
     )
+
+    # Theme Switcher in Sidebar
+    theme_switch_label = "☀️ Switch to Light Mode" if is_dark else "🌙 Switch to Dark Mode"
+    st.markdown('<div class="theme-switch-btn">', unsafe_allow_html=True)
+    st.button(
+        theme_switch_label,
+        on_click=toggle_theme_callback,
+        key="sidebar_theme_toggle",
+        use_container_width=True,
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
     # 1-Click Fast, Bulletproof Auto-Detect Location Button using Callback
     st.markdown('<div class="detect-btn-wrapper">', unsafe_allow_html=True)
@@ -644,7 +789,7 @@ with st.sidebar:
 
     # Quick City Presets using on_click callbacks (safe & collision-free)
     st.markdown(
-        "<span style='font-size: 0.82rem; font-weight: 600; color: #94A3B8;'>⚡ Quick Teleport Destinations:</span>",
+        "<span style='font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);'>⚡ Quick Teleport Destinations:</span>",
         unsafe_allow_html=True,
     )
     col_p1, col_p2 = st.columns(2)
@@ -659,7 +804,7 @@ with st.sidebar:
         st.button("🇦🇺 Sydney", on_click=set_city_callback, args=("Sydney",), use_container_width=True)
         st.button("🌴 Miami", on_click=set_city_callback, args=("Miami",), use_container_width=True)
 
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: var(--sidebar-border); margin: 20px 0;'>", unsafe_allow_html=True)
 
     # Genre Selector
     genre = st.selectbox(
@@ -695,15 +840,15 @@ with st.sidebar:
     # Sidebar Footer Specs Card
     render_html(
         """
-        <div style="margin-top: 28px; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);">
-            <div style="font-size: 0.78rem; font-weight: 700; color: #818CF8; letter-spacing: 0.05em; text-transform: uppercase;">
+        <div style="margin-top: 28px; padding: 16px; border-radius: 14px; background: var(--badge-chip-bg); border: 1px solid var(--badge-chip-border);">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #6366F1; letter-spacing: 0.05em; text-transform: uppercase;">
                 ✨ Studio Audio Engine
             </div>
-            <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 6px; line-height: 1.5;">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
                 • High-Res 600px Retina Covers<br>
                 • 30s High-Fidelity Audio Previews<br>
                 • Multi-provider telemetry & auto-sync<br>
-                • Deduplicated catalog matching
+                • Dark Luxury & Daylight Frost modes
             </div>
         </div>
         """
@@ -711,9 +856,10 @@ with st.sidebar:
 
 
 # --- Main Application Header ------------------------------------------
-render_html(
-    """
-    <div class="brand-header">
+col_head_left, col_head_right = st.columns([3, 1.3])
+with col_head_left:
+    render_html(
+        """
         <div>
             <h1 class="brand-title">
                 🌦️ Weather Beats
@@ -729,15 +875,34 @@ render_html(
                 Dynamic soundtracks algorithmically curated to your skies, temperature & time.
             </div>
         </div>
-        <div>
-            <span class="status-pill">
-                <span class="pulse-dot"></span>
-                Live Sky Sync
-            </span>
-        </div>
-    </div>
-    """
-)
+        """
+    )
+with col_head_right:
+    col_status, col_theme = st.columns([1, 1])
+    with col_status:
+        render_html(
+            """
+            <div style="padding-top: 10px;">
+                <span class="status-pill">
+                    <span class="pulse-dot"></span>
+                    Live Sync
+                </span>
+            </div>
+            """
+        )
+    with col_theme:
+        st.markdown('<div class="theme-switch-btn" style="padding-top: 4px;">', unsafe_allow_html=True)
+        top_switch_text = "☀️ Light" if is_dark else "🌙 Dark"
+        st.button(
+            top_switch_text,
+            on_click=toggle_theme_callback,
+            key="header_theme_toggle",
+            help="Switch between Light and Dark mode",
+            use_container_width=True,
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("<div style='height: 12px; border-bottom: 1px solid var(--header-border); margin-bottom: 24px;'></div>", unsafe_allow_html=True)
 
 
 # --- Weather & Recommendation Processing ------------------------------
@@ -766,8 +931,9 @@ else:
         vibe = get_weather_vibe_summary(weather, genre=genre)
         theme_key = vibe.get("theme", "sunny")
 
-        # Dynamically inject atmospheric theme gradient onto page
-        ambient_bg = THEME_GRADIENTS.get(theme_key, THEME_GRADIENTS["sunny"])
+        # Dynamically inject atmospheric theme gradient onto page (Dark or Light)
+        gradients_dict = THEME_GRADIENTS_DARK if is_dark else THEME_GRADIENTS_LIGHT
+        ambient_bg = gradients_dict.get(theme_key, gradients_dict["sunny"])
         st.markdown(
             f"""<style>.stApp {{ background: {ambient_bg} !important; background-attachment: fixed !important; }}</style>""",
             unsafe_allow_html=True,
@@ -832,7 +998,7 @@ else:
                     f"""
                     <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 10px;">
                         <h3 class="section-title">🎶 Curated Soundscapes</h3>
-                        <span style="color: #94A3B8; font-size: 0.9rem; font-weight: 500;">
+                        <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">
                             ({len(songs)} Unique Studio Master Tracks)
                         </span>
                     </div>
@@ -857,8 +1023,8 @@ else:
 
             render_html(
                 f"""
-                <div style="font-size: 0.85rem; color: #94A3B8; margin-bottom: 20px;">
-                    Showing <b style="color: #F8FAFC;">{len(displayed_songs)}</b> of <b style="color: #F8FAFC;">{len(songs)}</b> de-duplicated tracks • Instant 30s preview enabled
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
+                    Showing <b style="color: var(--text-primary);">{len(displayed_songs)}</b> of <b style="color: var(--text-primary);">{len(songs)}</b> de-duplicated tracks • Instant 30s preview enabled
                 </div>
                 """
             )
@@ -903,7 +1069,7 @@ else:
                                     st.audio(song["preview"])
                                 else:
                                     render_html(
-                                        "<div style='font-size: 0.8rem; color: #94A3B8; padding: 8px 0;'>ℹ️ Preview restricted by record label</div>"
+                                        "<div style='font-size: 0.8rem; color: var(--text-muted); padding: 8px 0;'>ℹ️ Preview restricted by record label</div>"
                                     )
 
                                 # External Streaming Action Links
