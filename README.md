@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🌦️ Weather Beats — Weather-Driven Music Recommender
 
 A modern Python & Streamlit application that algorithmically curates rich, non-repeating music playlists tailored in real-time to your local sky conditions, temperature, and daylight cycle.
@@ -54,3 +55,7 @@ c:\Weather\
    ```
 
 3. Open `http://localhost:8501` in your browser.
+=======
+# musicrecommender_based_onweather
+this recommends music based on weather
+>>>>>>> 9718b4d283bfb5987829303bdba82a1c541e428b
