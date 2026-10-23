@@ -1,4 +1,5 @@
-﻿streamlit
+streamlit
 requests
 streamlit-geolocation
 python-dotenv
+
