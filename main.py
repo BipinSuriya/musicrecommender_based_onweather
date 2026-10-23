@@ -3,14 +3,16 @@ import random
 import requests
 from urllib.parse import quote_plus
 
-# Load .env file if present (python-dotenv is optional but recommended)
-try:
-    from dotenv import load_dotenv
-    import pathlib
-    _env_path = pathlib.Path(__file__).parent / ".env"
-    load_dotenv(dotenv_path=_env_path, override=True)
-except ImportError:
-    pass  # dotenv not installed; rely on system environment variables
+# Load .env file manually using utf-8-sig to handle Windows BOM automatically
+import pathlib
+_env_path = pathlib.Path(__file__).parent / ".env"
+if _env_path.exists():
+    with open(_env_path, encoding="utf-8-sig") as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _, _v = _line.partition("=")
+                os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
 # --- Config -----------------------------------------------------------
 
