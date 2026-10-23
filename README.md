@@ -51,7 +51,6 @@ c:\Weather\
 2. **Run the Streamlit application:**
    ```bash
    streamlit run app.py
-   ```
+   ```      
 
 3. Open `http://localhost:8501` in your browser.
-=======
