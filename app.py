@@ -1,9 +1,9 @@
 import importlib
+import re
 from urllib.parse import quote_plus
-
 import streamlit as st
 
-# Optional geolocation support with dynamic import to prevent IDE missing-import warnings
+# Optional geolocation support with dynamic import and safety shielding
 streamlit_geolocation = None
 HAS_GEOLOCATION = False
 try:
@@ -19,7 +19,14 @@ from main import (
     get_dynamic_music_recommendations,
     get_weather_vibe_summary,
     reverse_geocode_city,
+    get_current_location,
 )
+
+# --- Safe HTML Renderer (Prevents Markdown Code Fence Formatting) ------
+def render_html(html_str):
+    """Safely render HTML in Streamlit without Markdown interpreting indentation as code fences."""
+    cleaned = re.sub(r"\s+", " ", html_str).strip()
+    st.markdown(cleaned, unsafe_allow_html=True)
 
 # --- Streamlit Page Configuration -------------------------------------
 st.set_page_config(
@@ -29,172 +36,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- Styling & CSS Design System --------------------------------------
-CUSTOM_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-}
-
-h1, h2, h3, h4, .hero-title, .track-title {
-    font-family: 'Outfit', sans-serif;
-}
-
-/* Glassmorphism Hero Card */
-.weather-hero {
-    border-radius: 20px;
-    padding: 28px 32px;
-    margin-bottom: 24px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.25);
-    transition: all 0.3s ease;
-}
-
-.weather-hero:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.35);
-}
-
-/* Metric Pills */
-.metric-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    padding: 8px 16px;
-    border-radius: 999px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    margin-right: 8px;
-    margin-bottom: 8px;
-}
-
-/* Song Recommendation Card */
-.song-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 16px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    backdrop-filter: blur(10px);
-}
-
-.song-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(99, 179, 237, 0.4);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-}
-
-.song-cover {
-    border-radius: 12px;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-}
-
-.badge-tag {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 12px;
-    background: rgba(99, 179, 237, 0.18);
-    color: #90cdf4;
-    border: 1px solid rgba(99, 179, 237, 0.3);
-    display: inline-block;
-    margin-right: 6px;
-}
-
-.track-number {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #a0aec0;
-    letter-spacing: 0.5px;
-}
-
-.track-artist {
-    color: #cbd5e0;
-    font-size: 0.95rem;
-    font-weight: 500;
-}
-
-.vibe-badge {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    display: inline-block;
-    letter-spacing: 0.4px;
-}
-
-/* Quick city chip buttons */
-div[data-testid="stHorizontalBlock"] button {
-    border-radius: 20px;
-}
-
-/* Music Streaming Action Buttons */
-.stream-btn-container {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-}
-
-.stream-btn {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-decoration: none !important;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff !important;
-}
-
-.stream-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-}
-
-.stream-btn-apple:hover {
-    background: rgba(250, 45, 72, 0.2);
-    border-color: rgba(250, 45, 72, 0.6);
-    color: #ffffff !important;
-}
-
-.stream-btn-spotify:hover {
-    background: rgba(29, 185, 84, 0.2);
-    border-color: rgba(29, 185, 84, 0.6);
-    color: #ffffff !important;
-}
-
-.stream-icon {
-    width: 19px;
-    height: 19px;
-    display: inline-block;
-    vertical-align: middle;
-    flex-shrink: 0;
-}
-</style>
-"""
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-
-# Official App Icon SVGs
+# --- Official Streaming Icon SVGs -------------------------------------
 APPLE_MUSIC_ICON_SVG = (
     '<svg class="stream-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">'
     '<rect width="100" height="100" rx="22" fill="#FC3C44"/>'
@@ -209,27 +51,28 @@ SPOTIFY_ICON_SVG = (
     '</svg>'
 )
 
+YOUTUBE_ICON_SVG = (
+    '<svg class="stream-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    '<path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#FF0000"/>'
+    '</svg>'
+)
 
 # --- Helper URL Builders ----------------------------------------------
 def spotify_search_url(title, artist):
     query = quote_plus(f"{title} {artist}")
     return f"https://open.spotify.com/search/{query}"
 
-
 def youtube_search_url(title, artist):
-    query = quote_plus(f"{title} {artist}")
+    query = quote_plus(f"{title} {artist} official audio")
     return f"https://www.youtube.com/results?search_query={query}"
-
 
 # --- Caching Wrappers -------------------------------------------------
 @st.cache_data(ttl=600, show_spinner=False)
 def cached_weather(city_name):
     return get_weather_and_time(city_name)
 
-
 @st.cache_data(ttl=600, show_spinner=False)
 def cached_recommendations(condition, time_of_day, temp, genre, count, seed_offset):
-    # Simulated weather dict for caching key stability
     mock_weather = {
         "condition": condition,
         "time_of_day": time_of_day,
@@ -239,72 +82,588 @@ def cached_recommendations(condition, time_of_day, temp, genre, count, seed_offs
         mock_weather, genre=genre, count=count, seed_offset=seed_offset
     )
 
-
-# --- Session State Initialization -------------------------------------
+# --- Session State Initialization & City Setter -----------------------
 if "city" not in st.session_state:
     st.session_state.city = "London"
+if "city_input_box" not in st.session_state:
+    st.session_state.city_input_box = st.session_state.city
 if "seed_offset" not in st.session_state:
     st.session_state.seed_offset = 0
-if "search_filter" not in st.session_state:
-    st.session_state.search_filter = ""
+
+def set_city(new_city):
+    """Safely update city in session state across all widgets."""
+    clean_city = new_city.strip()
+    st.session_state.city = clean_city
+    st.session_state.city_input_box = clean_city
+
+# --- Ambient Weather Theme Gradients ----------------------------------
+THEME_GRADIENTS = {
+    "sunny": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(245, 158, 11, 0.24) 0%, rgba(217, 119, 6, 0.08) 50%, rgba(8, 12, 21, 0) 100%), "
+        "linear-gradient(180deg, #0d121f 0%, #080c15 100%)"
+    ),
+    "night": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(99, 102, 241, 0.28) 0%, rgba(79, 70, 229, 0.10) 50%, rgba(8, 12, 21, 0) 100%), "
+        "linear-gradient(180deg, #090e1c 0%, #060912 100%)"
+    ),
+    "rain": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(14, 165, 233, 0.25) 0%, rgba(56, 189, 248, 0.09) 50%, rgba(8, 12, 21, 0) 100%), "
+        "linear-gradient(180deg, #08111f 0%, #070c16 100%)"
+    ),
+    "rain-night": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(20, 184, 166, 0.22) 0%, rgba(15, 118, 110, 0.09) 50%, rgba(8, 12, 21, 0) 100%), "
+        "linear-gradient(180deg, #07121b 0%, #050a10 100%)"
+    ),
+    "clouds": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(148, 163, 184, 0.22) 0%, rgba(100, 116, 139, 0.09) 50%, rgba(8, 12, 21, 0) 100%), "
+        "linear-gradient(180deg, #0d121c 0%, #080c14 100%)"
+    ),
+    "snow": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(186, 230, 253, 0.26) 0%, rgba(125, 211, 252, 0.10) 50%, rgba(8, 12, 21, 0) 100%), "
+        "linear-gradient(180deg, #0a1322 0%, #070c16 100%)"
+    ),
+    "storm": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(168, 85, 247, 0.30) 0%, rgba(126, 34, 206, 0.14) 50%, rgba(8, 12, 21, 0) 100%), "
+        "linear-gradient(180deg, #100b1d 0%, #08060f 100%)"
+    ),
+    "mist": (
+        "radial-gradient(ellipse 90% 60% at 50% -20%, rgba(192, 132, 252, 0.22) 0%, rgba(147, 51, 234, 0.09) 50%, rgba(8, 12, 21, 0) 100%), "
+        "linear-gradient(180deg, #0f0f1c 0%, #080812 100%)"
+    ),
+}
+
+# --- Premium Global CSS Design System ---------------------------------
+CUSTOM_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@500;600&display=swap');
+
+:root {
+    --bg-dark: #080C15;
+    --accent-indigo: #6366F1;
+    --accent-purple: #A855F7;
+    --accent-cyan: #06B6D4;
+    --accent-emerald: #10B981;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+}
+
+html, body, [class*="css"], .stApp {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    color: var(--text-primary) !important;
+    background-color: var(--bg-dark) !important;
+}
+
+h1, h2, h3, h4, .outfit-font {
+    font-family: 'Outfit', sans-serif !important;
+    letter-spacing: -0.02em;
+}
+
+/* Custom dark scrollbars */
+::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.6);
+}
+
+/* Hide unneeded Streamlit top decorative bar */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+/* Sidebar styling */
+section[data-testid="stSidebar"] {
+    background-color: #0b101c !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+section[data-testid="stSidebar"] .stTextInput input,
+section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 12px !important;
+    color: #F8FAFC !important;
+}
+
+section[data-testid="stSidebar"] .stTextInput input:focus {
+    border-color: #6366F1 !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Audio Wave Visualizer Animation */
+.sound-wave {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3.5px;
+    height: 22px;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+.sound-wave .bar {
+    width: 3.5px;
+    background: linear-gradient(180deg, #818CF8 0%, #EC4899 100%);
+    border-radius: 999px;
+    animation: soundWave 1.1s ease-in-out infinite alternate;
+}
+.sound-wave .b1 { height: 35%; animation-delay: 0.1s; }
+.sound-wave .b2 { height: 85%; animation-delay: 0.45s; }
+.sound-wave .b3 { height: 50%; animation-delay: 0.25s; }
+.sound-wave .b4 { height: 100%; animation-delay: 0.6s; }
+.sound-wave .b5 { height: 65%; animation-delay: 0.35s; }
+
+@keyframes soundWave {
+    0% { transform: scaleY(0.35); }
+    100% { transform: scaleY(1); }
+}
+
+/* Pulsing Status Dot */
+.pulse-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse 1.8s infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Premium Top Header Brand Bar */
+.brand-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0 20px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 24px;
+}
+.brand-title {
+    font-size: 2.3rem;
+    font-weight: 800;
+    margin: 0;
+    background: linear-gradient(135deg, #FFFFFF 30%, #A5B4FC 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: flex;
+    align-items: center;
+}
+.brand-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-top: 4px;
+    font-weight: 400;
+}
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #6EE7B7;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+/* Glassmorphism Hero Showcase Deck */
+.weather-hero-deck {
+    border-radius: 24px;
+    padding: 30px 34px;
+    margin-bottom: 28px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), 0 20px 48px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.weather-hero-deck:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), 0 24px 56px -12px rgba(0, 0, 0, 0.65);
+}
+
+.hero-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.badge-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #E2E8F0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.badge-condition {
+    background: rgba(99, 102, 241, 0.2);
+    color: #C7D2FE;
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.hero-main-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.temp-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 24px;
+    border-radius: 20px;
+}
+.temp-number {
+    font-family: 'Outfit', sans-serif;
+    font-size: 3.8rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #FFFFFF;
+}
+.temp-unit {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #A5B4FC;
+}
+.temp-subtext {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.hero-headline {
+    font-size: 1.85rem;
+    font-weight: 700;
+    margin: 8px 0 6px 0;
+    color: #FFFFFF;
+    font-family: 'Outfit', sans-serif;
+}
+.hero-desc {
+    font-size: 1.05rem;
+    color: #CBD5E1;
+    line-height: 1.6;
+    max-width: 680px;
+    margin: 0;
+}
+
+.hero-metrics-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.metric-tile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 8px 16px;
+    font-size: 0.92rem;
+    color: #E2E8F0;
+    transition: all 0.2s ease;
+}
+.metric-tile:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-1px);
+}
+
+/* Container Border Wrapper Card Styling (Streamlit Native Containers) */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%) !important;
+    backdrop-filter: blur(18px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    border-radius: 20px !important;
+    padding: 18px 20px !important;
+    box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45) !important;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease !important;
+    margin-bottom: 18px !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(99, 102, 241, 0.45) !important;
+    box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.65), 0 0 24px 0 rgba(99, 102, 241, 0.18) !important;
+}
+
+/* Track Card Metadata */
+.card-header-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.track-rank {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #818CF8;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+.track-name-text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin: 4px 0 2px 0;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.track-artist-text {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #CBD5E1;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.track-album-text {
+    font-size: 0.82rem;
+    color: #94A3B8;
+    margin-bottom: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Native Streamlit Audio Player Styling */
+div[data-testid="stAudio"] {
+    margin: 8px 0 12px 0;
+}
+div[data-testid="stAudio"] audio {
+    width: 100%;
+    height: 38px;
+    border-radius: 999px;
+    outline: none;
+    filter: invert(0.92) hue-rotate(180deg) brightness(1.15);
+}
+
+/* External Streaming Link Buttons */
+.stream-actions-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+.stream-action-pill {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: #FFFFFF !important;
+}
+.stream-action-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.btn-apple:hover {
+    background: rgba(252, 60, 68, 0.22);
+    border-color: rgba(252, 60, 68, 0.65);
+    box-shadow: 0 6px 20px rgba(252, 60, 68, 0.25);
+}
+.btn-spotify:hover {
+    background: rgba(29, 185, 84, 0.22);
+    border-color: rgba(29, 185, 84, 0.65);
+    box-shadow: 0 6px 20px rgba(29, 185, 84, 0.25);
+}
+.btn-youtube:hover {
+    background: rgba(255, 0, 0, 0.2);
+    border-color: rgba(255, 0, 0, 0.6);
+    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.25);
+}
+
+.stream-icon {
+    width: 17px;
+    height: 17px;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+/* Styled Streamlit Button Overrides */
+div[data-testid="stButton"] button {
+    border-radius: 14px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #F8FAFC !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+div[data-testid="stButton"] button:hover {
+    background: rgba(99, 102, 241, 0.2) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Auto-Detect Location Button Accent */
+.detect-btn-wrapper div[data-testid="stButton"] button {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(168, 85, 247, 0.25) 100%) !important;
+    border: 1px solid rgba(99, 102, 241, 0.45) !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+}
+.detect-btn-wrapper div[data-testid="stButton"] button:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.45) 0%, rgba(168, 85, 247, 0.45) 100%) !important;
+    border-color: rgba(168, 85, 247, 0.7) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35) !important;
+}
+
+/* Primary discovery button */
+.shuffle-btn-wrapper div[data-testid="stButton"] button {
+    background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%) !important;
+    border: none !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.5) !important;
+}
+.shuffle-btn-wrapper div[data-testid="stButton"] button:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 12px 30px -4px rgba(168, 85, 247, 0.6) !important;
+}
+</style>
+"""
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
-# --- Sidebar Navigation & Controls ------------------------------------
+# --- Sidebar Navigation & Atmosphere Console ---------------------------
 with st.sidebar:
-    st.markdown("### 🎛️ **Atmospheric Control**")
-
-    # Geolocation support
-    if HAS_GEOLOCATION and callable(streamlit_geolocation):
-        st.caption("📍 Pinpoint your local atmospheric vibe")
-        loc = streamlit_geolocation()
-        if loc and loc.get("latitude"):
-            with st.spinner("Resolving GPS coordinates..."):
-                detected = reverse_geocode_city(loc["latitude"], loc["longitude"])
-                if detected:
-                    st.session_state.city = detected
-                    st.success(f"📍 Set to **{detected}**")
-                else:
-                    st.warning("Could not resolve GPS to city name.")
-
-    city_input = st.text_input(
-        "🏙️ City Name",
-        value=st.session_state.city,
-        placeholder="e.g. New York, Tokyo, Paris, Chennai...",
-        key="city_input_box",
+    render_html(
+        """
+        <div style="padding: 10px 0 18px 0; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px;">
+            <div style="font-size: 1.3rem; font-weight: 800; font-family: 'Outfit', sans-serif; color: #FFFFFF;">
+                🎛️ Atmospheric Studio
+            </div>
+            <div style="font-size: 0.82rem; color: #94A3B8; margin-top: 3px;">
+                Fine-tune your skies & music algorithms
+            </div>
+        </div>
+        """
     )
-    if city_input:
+
+    # 1-Click Fast, Bulletproof Auto-Detect Location Button
+    st.markdown('<div class="detect-btn-wrapper">', unsafe_allow_html=True)
+    if st.button("🎯 Auto-Detect My Location", use_container_width=True):
+        with st.spinner("📡 Triangulating local skies..."):
+            detected = get_current_location()
+            if detected:
+                set_city(detected)
+                st.toast(f"📍 Sky synchronized with {detected}!", icon="🌦️")
+                st.rerun()
+            else:
+                st.warning("⚠️ Could not resolve network location. Please type your city name below.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Optional Satellite GPS fallback with safe error shielding
+    if HAS_GEOLOCATION and callable(streamlit_geolocation):
+        with st.expander("📡 Precision Satellite GPS", expanded=False):
+            st.caption("Tap below to query device GPS sensor:")
+            try:
+                loc = streamlit_geolocation()
+                if loc and loc.get("latitude") and loc.get("longitude"):
+                    detected = reverse_geocode_city(loc["latitude"], loc["longitude"])
+                    if detected and detected.lower() != st.session_state.city.lower():
+                        set_city(detected)
+                        st.toast(f"📍 GPS locked: {detected}", icon="🛰️")
+                        st.rerun()
+            except Exception:
+                st.caption("Hardware GPS unavailable; network telemetry active.")
+
+    # Synchronized City Input Box
+    city_input = st.text_input(
+        "🏙️ City or Destination",
+        key="city_input_box",
+        placeholder="e.g. London, Tokyo, New York, Chennai...",
+    )
+    if city_input and city_input.strip() != st.session_state.city:
         st.session_state.city = city_input.strip()
+        st.rerun()
 
     # Quick City Presets
-    st.caption("⚡ Quick City Presets:")
-    col_p1, col_p2, col_p3 = st.columns(3)
+    st.markdown(
+        "<span style='font-size: 0.82rem; font-weight: 600; color: #94A3B8;'>⚡ Quick Teleport Destinations:</span>",
+        unsafe_allow_html=True,
+    )
+    col_p1, col_p2 = st.columns(2)
     with col_p1:
         if st.button("🇬🇧 London", use_container_width=True):
-            st.session_state.city = "London"
+            set_city("London")
             st.rerun()
         if st.button("🇯🇵 Tokyo", use_container_width=True):
-            st.session_state.city = "Tokyo"
+            set_city("Tokyo")
+            st.rerun()
+        if st.button("🇮🇳 Chennai", use_container_width=True):
+            set_city("Chennai")
+            st.rerun()
+        if st.button("🇮🇸 Reykjavík", use_container_width=True):
+            set_city("Reykjavik")
             st.rerun()
     with col_p2:
         if st.button("🇺🇸 New York", use_container_width=True):
-            st.session_state.city = "New York"
+            set_city("New York")
             st.rerun()
-        if st.button("🇮🇳 Chennai", use_container_width=True):
-            st.session_state.city = "Chennai"
-            st.rerun()
-    with col_p3:
         if st.button("🇫🇷 Paris", use_container_width=True):
-            st.session_state.city = "Paris"
+            set_city("Paris")
             st.rerun()
         if st.button("🇦🇺 Sydney", use_container_width=True):
-            st.session_state.city = "Sydney"
+            set_city("Sydney")
+            st.rerun()
+        if st.button("🌴 Miami", use_container_width=True):
+            set_city("Miami")
             st.rerun()
 
-    st.divider()
+    st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 20px 0;'>", unsafe_allow_html=True)
 
     # Genre Selector
     genre = st.selectbox(
-        "🎧 Musical Atmosphere (Genre)",
+        "🎧 Musical Atmosphere",
         [
             "Pop",
             "Rock",
@@ -318,119 +677,184 @@ with st.sidebar:
         index=0,
     )
 
-    # Song Count Slider (Allowing 10 to 40+ non-repeating songs)
+    # Track count
     song_count = st.slider(
-        "🔢 Number of Songs to Recommend",
+        "🔢 Soundscapes to Recommend",
         min_value=10,
         max_value=40,
         value=24,
         step=2,
-        help="Recommends a deep, rich non-repeating playlist of unique tracks.",
+        help="Recommends a deep non-repeating playlist of unique studio tracks.",
     )
 
-    # Refresh / Shuffle Button
+    # Shuffle button
+    st.markdown('<div class="shuffle-btn-wrapper">', unsafe_allow_html=True)
     if st.button("🎲 Shuffle & Fresh Discoveries", use_container_width=True):
         st.session_state.seed_offset += 1
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.caption("✨ Powered by **OpenWeatherMap** & **Apple Music / iTunes Engine**")
+    # Sidebar Footer Specs Card
+    render_html(
+        """
+        <div style="margin-top: 28px; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #818CF8; letter-spacing: 0.05em; text-transform: uppercase;">
+                ✨ Studio Audio Engine
+            </div>
+            <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 6px; line-height: 1.5;">
+                • High-Res 600px Retina Covers<br>
+                • 30s High-Fidelity Audio Previews<br>
+                • Real-time OpenWeather atmospheric telemetry<br>
+                • Deduplicated catalog matching
+            </div>
+        </div>
+        """
+    )
 
 
 # --- Main Application Header ------------------------------------------
-col_head1, col_head2 = st.columns([3, 1])
-with col_head1:
-    st.markdown(
-        """
-        # 🌦️ **Weather Beats**
-        ##### *Dynamic soundtracks algorithmically curated to your skies, temperature & time.*
-        """
-    )
-with col_head2:
-    st.markdown(
-        """
-        <div style="text-align: right; padding-top: 15px;">
-            <span class="vibe-badge">⚡ Real-Time Weather Sync</span>
+render_html(
+    """
+    <div class="brand-header">
+        <div>
+            <h1 class="brand-title">
+                🌦️ Weather Beats
+                <span class="sound-wave">
+                    <span class="bar b1"></span>
+                    <span class="bar b2"></span>
+                    <span class="bar b3"></span>
+                    <span class="bar b4"></span>
+                    <span class="bar b5"></span>
+                </span>
+            </h1>
+            <div class="brand-subtitle">
+                Dynamic soundtracks algorithmically curated to your skies, temperature & time.
+            </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-st.markdown("<hr style='margin-top: 5px; margin-bottom: 25px;'>", unsafe_allow_html=True)
+        <div>
+            <span class="status-pill">
+                <span class="pulse-dot"></span>
+                Live Sky Sync
+            </span>
+        </div>
+    </div>
+    """
+)
 
 
 # --- Weather & Recommendation Processing ------------------------------
 current_city = st.session_state.city.strip()
 
 if not current_city:
-    st.info("👈 Please enter a city or select a preset from the sidebar to begin.")
+    st.info("👈 Enter a city or pick a preset from the sidebar to begin your journey.")
 else:
     with st.spinner(f"📡 Fetching live atmospheric conditions for {current_city}..."):
-        weather = cached_weather(current_city)
+        try:
+            weather = cached_weather(current_city)
+        except Exception:
+            weather = None
 
     if not weather:
         st.error(
-            f"❌ Unable to find weather data for **'{current_city}'**. "
-            "Please verify the city spelling or try another city."
+            f"❌ Unable to find weather telemetry for **'{current_city}'**. "
+            "Please check the spelling or select a quick preset from below."
         )
+        col_err1, col_err2 = st.columns(2)
+        with col_err1:
+            if st.button("🔄 Reset to London", use_container_width=True):
+                set_city("London")
+                st.rerun()
+        with col_err2:
+            if st.button("🎯 Detect My Location", use_container_width=True):
+                loc = get_current_location()
+                if loc:
+                    set_city(loc)
+                    st.rerun()
     else:
-        # Determine current vibe profile
         vibe = get_weather_vibe_summary(weather, genre=genre)
+        theme_key = vibe.get("theme", "sunny")
 
-        # Dynamic Weather Banner / Hero Card
-        flag = f"({weather['country']})" if weather.get('country') else ""
+        # Dynamically inject atmospheric theme gradient onto page
+        ambient_bg = THEME_GRADIENTS.get(theme_key, THEME_GRADIENTS["sunny"])
+        st.markdown(
+            f"""<style>.stApp {{ background: {ambient_bg} !important; background-attachment: fixed !important; }}</style>""",
+            unsafe_allow_html=True,
+        )
+
+        flag = f"({weather['country']})" if weather.get("country") else ""
         icon_url = f"https://openweathermap.org/img/wn/{weather['icon']}@2x.png" if weather.get("icon") else ""
 
-        banner_html = f"""
-        <div class="weather-hero">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
+        # Luxury Frosted Hero Deck (Safely rendered via render_html)
+        hero_html = f"""
+        <div class="weather-hero-deck">
+            <div class="hero-meta-row">
+                <span class="badge-chip">📍 <b>{weather['city']}</b> {flag}</span>
+                <span class="badge-chip">🕒 <b>{weather['time_of_day']}time</b></span>
+                <span class="badge-chip badge-condition">{vibe['icon']} {weather['condition']}</span>
+                <span class="badge-chip">🎧 {genre} Mode</span>
+            </div>
+            <div class="hero-main-content">
                 <div>
-                    <span class="badge-tag">📍 {weather['city']} {flag}</span>
-                    <span class="badge-tag">🕒 {weather['time_of_day']}time</span>
-                    <span class="badge-tag">{vibe['icon']} {weather['condition']}</span>
-                    <h2 style="margin: 12px 0 6px 0; font-size: 2.1rem; font-weight: 700;">{vibe['headline']}</h2>
-                    <p style="color: #cbd5e0; margin: 0 0 14px 0; font-size: 1.05rem; max-width: 750px;">
-                        {vibe['desc']}
-                    </p>
-                    <div style="display: flex; flex-wrap: wrap; margin-top: 8px;">
-                        <div class="metric-pill">🌡️ <b>{weather['temperature']}°C</b> (Feels {weather['feels_like']}°C)</div>
-                        <div class="metric-pill">💧 Humidity: <b>{weather['humidity']}%</b></div>
-                        <div class="metric-pill">💨 Wind: <b>{weather['wind_speed']} m/s</b></div>
-                        <div class="metric-pill">🌤️ Sky: <b>{weather['description']}</b></div>
+                    <h2 class="hero-headline">{vibe['headline']}</h2>
+                    <p class="hero-desc">{vibe['desc']}</p>
+                </div>
+                <div class="temp-display">
+                    <div class="temp-number">{weather['temperature']}</div>
+                    <div>
+                        <div class="temp-unit">°C</div>
+                        <div class="temp-subtext">Feels {weather['feels_like']}°C</div>
                     </div>
                 </div>
             </div>
+            <div class="hero-metrics-grid">
+                <div class="metric-tile">💧 Humidity: <b>{weather['humidity']}%</b></div>
+                <div class="metric-tile">💨 Wind: <b>{weather['wind_speed']} m/s</b></div>
+                <div class="metric-tile">🌤️ Atmosphere: <b>{weather['description'].title()}</b></div>
+                <div class="metric-tile">✨ Curated Mood: <b>{weather['condition']} Sky</b></div>
+            </div>
         </div>
         """
-        st.markdown(banner_html, unsafe_allow_html=True)
+        render_html(hero_html)
 
         # Fetch dynamic non-repeated recommendations
-        with st.spinner(f"🎶 Mixing {song_count} non-repeated tracks for {genre} in {weather['condition']} skies..."):
-            songs = cached_recommendations(
-                weather["condition"],
-                weather["time_of_day"],
-                weather["temperature"],
-                genre,
-                song_count,
-                st.session_state.seed_offset,
-            )
+        with st.spinner(f"🎶 Mixing {song_count} studio tracks for {genre} in {weather['condition']} skies..."):
+            try:
+                songs = cached_recommendations(
+                    weather["condition"],
+                    weather["time_of_day"],
+                    weather["temperature"],
+                    genre,
+                    song_count,
+                    st.session_state.seed_offset,
+                )
+            except Exception:
+                songs = []
 
         if not songs:
-            st.warning(f"No songs found for {genre} right now. Try switching genres or refreshing!")
+            st.warning(f"No songs discovered for {genre} right now. Try switching genres or tapping Shuffle!")
         else:
-            # Control bar for results: Filter & stats
-            sub_col1, sub_col2 = st.columns([2, 1])
-            with sub_col1:
-                st.subheader(f"🎶 Curated Playlist ({len(songs)} Unique Tracks • No Repeats)")
-            with sub_col2:
+            # Control Deck: Search Filter & Stats
+            col_sec_title, col_sec_filter = st.columns([1.8, 1.2])
+            with col_sec_title:
+                render_html(
+                    f"""
+                    <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 10px;">
+                        <h3 class="section-title">🎶 Curated Soundscapes</h3>
+                        <span style="color: #94A3B8; font-size: 0.9rem; font-weight: 500;">
+                            ({len(songs)} Unique Studio Master Tracks)
+                        </span>
+                    </div>
+                    """
+                )
+            with col_sec_filter:
                 filter_text = st.text_input(
-                    "🔍 Filter songs or artists",
-                    placeholder="Type to filter...",
+                    "Search songs or artists",
+                    placeholder="🔍 Filter by song, artist, album...",
                     label_visibility="collapsed",
                 )
 
-            # Filter songs if user typed a keyword
-            if filter_text.strip():
+            # Filter songs if user entered query
+            if filter_text and filter_text.strip():
                 query = filter_text.strip().lower()
                 displayed_songs = [
                     s for s in songs
@@ -439,73 +863,76 @@ else:
             else:
                 displayed_songs = songs
 
-            st.caption(
-                f"Showing **{len(displayed_songs)}** of **{len(songs)}** non-repeated tracks. "
-                "All songs are de-duplicated by title and artist identity."
+            render_html(
+                f"""
+                <div style="font-size: 0.85rem; color: #94A3B8; margin-bottom: 20px;">
+                    Showing <b style="color: #F8FAFC;">{len(displayed_songs)}</b> of <b style="color: #F8FAFC;">{len(songs)}</b> de-duplicated tracks • Instant 30s preview enabled
+                </div>
+                """
             )
 
-            # Render Cards in a 2-Column Responsive Grid Layout
+            # Render in a Responsive 2-Column Grid with Native Border Containers
             cols_per_row = 2
             for i in range(0, len(displayed_songs), cols_per_row):
                 row_cols = st.columns(cols_per_row)
                 for col_idx, song_idx in enumerate(range(i, min(i + cols_per_row, len(displayed_songs)))):
                     song = displayed_songs[song_idx]
                     with row_cols[col_idx]:
-                        with st.container():
-                            # Inner columns for artwork & metadata
-                            art_col, meta_col = st.columns([1, 2.2])
+                        with st.container(border=True):
+                            art_col, meta_col = st.columns([1, 2.3])
 
                             with art_col:
-                                if song.get("artwork"):
-                                    st.image(
-                                        song["artwork"],
-                                        use_container_width=True,
-                                        output_format="JPEG",
-                                    )
-                                else:
-                                    st.image(
-                                        "https://placehold.co/400x400/222/white?text=Music",
-                                        use_container_width=True,
-                                    )
+                                art_url = song.get("artwork") or "https://placehold.co/600x600/121829/FFFFFF?text=Music"
+                                st.image(
+                                    art_url,
+                                    use_container_width=True,
+                                    output_format="JPEG",
+                                )
 
                             with meta_col:
-                                # Header badges
-                                tag_row = f"<span class='track-number'>#{song_idx + 1}</span> "
-                                if song.get("duration"):
-                                    tag_row += f"<span class='badge-tag'>⏱️ {song['duration']}</span> "
-                                if song.get("year"):
-                                    tag_row += f"<span class='badge-tag'>📅 {song['year']}</span>"
-                                st.markdown(tag_row, unsafe_allow_html=True)
+                                # Header badges row
+                                rank_num = f"#{song_idx + 1:02d}"
+                                duration_chip = f"<span class='badge-chip' style='padding: 2px 8px; font-size: 0.75rem;'>⏱️ {song['duration']}</span>" if song.get("duration") else ""
+                                year_chip = f"<span class='badge-chip' style='padding: 2px 8px; font-size: 0.75rem;'>📅 {song['year']}</span>" if song.get("year") else ""
 
-                                # Title and artist
-                                st.markdown(f"**{song['title']}**")
-                                st.markdown(f"<span class='track-artist'>👤 {song['artist']}</span>", unsafe_allow_html=True)
-                                st.caption(f"💿 {song['album']}")
+                                card_meta_html = f"""
+                                <div class="card-header-line">
+                                    <span class="track-rank">{rank_num}</span>
+                                    <div>{duration_chip} {year_chip}</div>
+                                </div>
+                                <div class="track-name-text" title="{song['title']}">{song['title']}</div>
+                                <div class="track-artist-text">👤 <b>{song['artist']}</b></div>
+                                <div class="track-album-text" title="{song['album']}">💿 {song['album']}</div>
+                                """
+                                render_html(card_meta_html)
 
                                 # Audio preview player
                                 if song.get("preview"):
                                     st.audio(song["preview"])
                                 else:
-                                    st.caption("ℹ️ Preview unavailable from publisher")
+                                    render_html(
+                                        "<div style='font-size: 0.8rem; color: #94A3B8; padding: 8px 0;'>ℹ️ Preview restricted by record label</div>"
+                                    )
 
-                                # External streaming links with official app icons
+                                # External Streaming Action Links
                                 apple_link = song.get("link", "#")
                                 spotify_url = spotify_search_url(song["title"], song["artist"])
+                                youtube_url = youtube_search_url(song["title"], song["artist"])
 
-                                st.markdown(
-                                    f"""
-                                    <div class="stream-btn-container">
-                                        <a href="{apple_link}" target="_blank" rel="noopener noreferrer" class="stream-btn stream-btn-apple">
-                                            {APPLE_MUSIC_ICON_SVG}
-                                            <span>Apple Music</span>
-                                        </a>
-                                        <a href="{spotify_url}" target="_blank" rel="noopener noreferrer" class="stream-btn stream-btn-spotify">
-                                            {SPOTIFY_ICON_SVG}
-                                            <span>Spotify</span>
-                                        </a>
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True,
-                                )
-
-                        st.markdown("<hr style='margin: 12px 0 20px 0; opacity: 0.2;'>", unsafe_allow_html=True)
+                                actions_html = f"""
+                                <div class="stream-actions-group">
+                                    <a href="{apple_link}" target="_blank" rel="noopener noreferrer" class="stream-action-pill btn-apple" title="Listen on Apple Music">
+                                        {APPLE_MUSIC_ICON_SVG}
+                                        <span>Apple</span>
+                                    </a>
+                                    <a href="{spotify_url}" target="_blank" rel="noopener noreferrer" class="stream-action-pill btn-spotify" title="Search on Spotify">
+                                        {SPOTIFY_ICON_SVG}
+                                        <span>Spotify</span>
+                                    </a>
+                                    <a href="{youtube_url}" target="_blank" rel="noopener noreferrer" class="stream-action-pill btn-youtube" title="Search on YouTube">
+                                        {YOUTUBE_ICON_SVG}
+                                        <span>YouTube</span>
+                                    </a>
+                                </div>
+                                """
+                                render_html(actions_html)

@@ -96,13 +96,23 @@ GENRE_WEATHER_CATALOG = {
 # --- Weather & Location Service ----------------------------------------
 
 def get_current_location():
-    """Best-effort IP-based city lookup. Returns city name string or None."""
-    try:
-        response = requests.get("https://ipinfo.io/json", timeout=5)
-        response.raise_for_status()
-        return response.json().get("city")
-    except requests.RequestException:
-        return None
+    """Resilient multi-provider location detector (ipinfo -> ip-api -> freeipapi). Returns city name or None."""
+    endpoints = [
+        ("https://ipinfo.io/json", "city"),
+        ("http://ip-api.com/json", "city"),
+        ("https://freeipapi.com/api/json", "cityName"),
+    ]
+    for url, key in endpoints:
+        try:
+            resp = requests.get(url, timeout=3.5)
+            if resp.status_code == 200:
+                data = resp.json()
+                city = data.get(key)
+                if city and isinstance(city, str) and city.strip():
+                    return city.strip()
+        except Exception:
+            continue
+    return None
 
 
 def get_weather_and_time(city_name):
@@ -350,6 +360,39 @@ def get_dynamic_music_recommendations(weather_info, genre="Pop", count=25, seed_
 
             if len(aggregated_tracks) >= count * 2:
                 break
+
+    # Fallback to general genre/hits query if specific pool searches yielded no tracks
+    if not aggregated_tracks:
+        backup_query = f"{genre} hits"
+        try:
+            resp = requests.get(
+                "https://itunes.apple.com/search",
+                params={"term": backup_query, "entity": "song", "limit": count},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                for item in resp.json().get("results", []):
+                    title = item.get("trackName", "").strip()
+                    artist = item.get("artistName", "").strip()
+                    if not title or not artist:
+                        continue
+                    raw_art = item.get("artworkUrl100", "")
+                    hi_res_art = raw_art.replace("100x100bb.jpg", "600x600bb.jpg").replace("100x100", "600x600")
+                    aggregated_tracks.append({
+                        "id": item.get("trackId") or f"{title}__{artist}",
+                        "title": title,
+                        "artist": artist,
+                        "album": item.get("collectionName", "Single / EP"),
+                        "preview": item.get("previewUrl"),
+                        "link": item.get("trackViewUrl"),
+                        "artwork": hi_res_art,
+                        "duration": format_duration(item.get("trackTimeMillis")),
+                        "year": item.get("releaseDate", "")[:4] if item.get("releaseDate") else "",
+                        "genre": item.get("primaryGenreName", genre),
+                        "matched_query": backup_query,
+                    })
+        except Exception:
+            pass
 
     # Prioritize tracks with audio previews first, while keeping track diversity
     with_preview = [t for t in aggregated_tracks if t["preview"]]
