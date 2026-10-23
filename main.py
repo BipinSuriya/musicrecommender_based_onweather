@@ -14,6 +14,14 @@ if _env_path.exists():
                 _k, _, _v = _line.partition("=")
                 os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
+# Fallback: read from Streamlit secrets (used on Streamlit Cloud)
+try:
+    import streamlit as st
+    if hasattr(st, "secrets") and "OPENWEATHER_API_KEY" in st.secrets:
+        os.environ.setdefault("OPENWEATHER_API_KEY", st.secrets["OPENWEATHER_API_KEY"])
+except Exception:
+    pass
+
 # --- Config -----------------------------------------------------------
 
 # Read API key exclusively from environment variable (set in .env or system env)
