@@ -6,7 +6,9 @@ from urllib.parse import quote_plus
 # Load .env file if present (python-dotenv is optional but recommended)
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    import pathlib
+    _env_path = pathlib.Path(__file__).parent / ".env"
+    load_dotenv(dotenv_path=_env_path, override=True)
 except ImportError:
     pass  # dotenv not installed; rely on system environment variables
 
