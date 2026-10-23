@@ -89,6 +89,8 @@ SAVED_HOME_CITY = get_saved_default_city()
 
 if "city" not in st.session_state:
     st.session_state.city = SAVED_HOME_CITY
+if "_pending_city" not in st.session_state:
+    st.session_state["_pending_city"] = None
 if "city_input_box" not in st.session_state:
     st.session_state.city_input_box = st.session_state.city
 if "seed_offset" not in st.session_state:
@@ -109,7 +111,9 @@ def set_city_callback(new_city):
     """Callback triggered before script run: safely updates city state without widget key collisions."""
     clean_city = new_city.strip()
     st.session_state.city = clean_city
-    st.session_state.city_input_box = clean_city
+    # Use a pending key instead of writing directly to the widget key
+    # (Streamlit ignores direct writes to widget keys from callbacks in newer versions)
+    st.session_state["_pending_city"] = clean_city
 
 def on_city_input_change():
     """Callback triggered when user types and enters a city into the text input."""
@@ -790,12 +794,18 @@ with st.sidebar:
             except Exception:
                 st.caption("Satellite GPS idle. Network telemetry active.")
 
+
+    # Apply pending city from quick-preset button clicks (bypasses widget key conflict)
+    if st.session_state.get("_pending_city"):
+        st.session_state.city_input_box = st.session_state["_pending_city"]
+        st.session_state["_pending_city"] = None
+
     # Synchronized City Input Box with on_change callback
     city_input = st.text_input(
         "🏙️ City or Destination",
         key="city_input_box",
         on_change=on_city_input_change,
-        placeholder="e.g. London, Tokyo, New York, Chennai...",
+        placeholder="e.g. London, Tokyo, New York, Coimbatore...",
     )
 
     # Quick City Presets using on_click callbacks (safe & collision-free)
@@ -807,7 +817,7 @@ with st.sidebar:
     with col_p1:
         st.button("🇬🇧 London", on_click=set_city_callback, args=("London",), use_container_width=True)
         st.button("🇯🇵 Tokyo", on_click=set_city_callback, args=("Tokyo",), use_container_width=True)
-        st.button("🇮🇳 Chennai", on_click=set_city_callback, args=("Chennai",), use_container_width=True)
+        st.button("🇮🇳 Coimbatore", on_click=set_city_callback, args=("Coimbatore",), use_container_width=True)
         st.button("🇮🇸 Reykjavík", on_click=set_city_callback, args=("Reykjavik",), use_container_width=True)
     with col_p2:
         st.button("🇺🇸 New York", on_click=set_city_callback, args=("New York",), use_container_width=True)
