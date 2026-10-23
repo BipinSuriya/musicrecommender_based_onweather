@@ -1,6 +1,14 @@
 # 🌦️ Weather Beats — Weather-Driven Music Recommender
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://musicrecommenderbasedonweather-ay5ltddqbwe7nx3czfse72.streamlit.app)
+
 A modern Python & Streamlit application that algorithmically curates rich, non-repeating music playlists tailored in real-time to your local sky conditions, temperature, and daylight cycle.
+
+---
+
+## 🌐 Live Demo
+
+> **Try it now:** [https://musicrecommenderbasedonweather-ay5ltddqbwe7nx3czfse72.streamlit.app](https://musicrecommenderbasedonweather-ay5ltddqbwe7nx3czfse72.streamlit.app)
 
 ---
 
@@ -51,6 +59,14 @@ c:\Weather\
 2. **Run the Streamlit application:**
    ```bash
    streamlit run app.py
-   ```      
+   ```
 
 3. Open `http://localhost:8501` in your browser.
+
+---
+
+## ☁️ Deployed App
+
+The app is live on **Streamlit Community Cloud**:
+
+🔗 **[https://musicrecommenderbasedonweather-ay5ltddqbwe7nx3czfse72.streamlit.app](https://musicrecommenderbasedonweather-ay5ltddqbwe7nx3czfse72.streamlit.app)**
